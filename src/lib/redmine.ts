@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import RedmineIssuePluginSettings from '../settings'
-import { request } from 'https'
+import { request } from 'http'
 import { join } from 'path'
 
 export interface RedmineIssue {
@@ -59,7 +59,7 @@ export default class RedmineClient {
   async callApi(method: string, path: string, data: any = {}): Promise<any> {
     const options = {
       hostname: this.settings.host,
-      port: 443,
+      port: this.settings.port,
       path: join('/', path),
       method: method,
       headers: {
@@ -132,7 +132,7 @@ export default class RedmineClient {
         name: res.issue.project.name
       },
       subject: res.issue.subject,
-      status: res.issue.name,
+      status: res.issue.status.name,
       timeTracking: {
         doneRatio: res.issue.done_ratio || 0,
         spentHours: res.issue.spent_hours || 0,
@@ -145,10 +145,16 @@ export default class RedmineClient {
     const res = await this.callApi('GET', join('enumerations', 'time_entry_activities.json'))
     res.time_entry_activities = res.time_entry_activities || []
 
-    return res.time_entry_activities.map((activity: { id: any; name: any; is_default: any }) => ({
+    // filter non active 
+    const activeActivities = res.time_entry_activities.filter(
+      (activity: { active: boolean }) => activity.active
+    )
+
+    return activeActivities.map((activity: { id: any; name: any; is_default: any; active: any }) => ({
       id: activity.id,
       name: activity.name,
-      isDefault: activity.is_default
+      isDefault: activity.is_default,
+      active: activity.active,
     }))
   }
 
@@ -157,10 +163,15 @@ export default class RedmineClient {
     res.project = res.project || {}
     res.project.time_entry_activities = res.project.time_entry_activities || []
 
-    return res.project.time_entry_activities.map((activity: { id: any; name: any; is_default: any }) => ({
+    // filter non active
+    const activeActivities = res.project.time_entry_activities.filter(
+      (activity: { active: boolean }) => activity.active
+    )
+
+    return activeActivities.map((activity: { id: any; name: any; is_default: any; active: any }) => ({
       id: activity.id,
       name: activity.name,
-      isDefault: activity.is_default,
+      isDefault: activity.active,
       projectId: projectId
     }))
   }
@@ -172,7 +183,14 @@ export default class RedmineClient {
         comments: comments || '',
         activity_id: activityId,
         hours: hours,
-        spent_on: (spentOn || new Date()).toISOString().slice(0, 10)
+        spent_on: (spentOn || new Date()).toISOString().slice(0, 10),
+        custom_fields: [
+          {
+            id: 93,
+            name: 'RD_Function_Team',
+            value: this.settings.functionTeam
+          },
+        ],
       }
     })
   }

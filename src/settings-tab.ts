@@ -10,7 +10,7 @@ export default class RedmineIssueSettingTab extends PluginSettingTab {
 	}
 
 	async display(): Promise<void> {
-		const {containerEl} = this
+		const { containerEl } = this
 
 		containerEl.empty()
 
@@ -26,6 +26,17 @@ export default class RedmineIssueSettingTab extends PluginSettingTab {
 				}))
 		
 		new Setting(containerEl)
+			.setName('Redmine port number')
+			.setDesc('The domain port of Redmine instance')
+			.addText(text => text
+				.setValue(this.plugin.settings.port.toString())
+				.setPlaceholder('443')
+				.onChange(async (value) => {
+					this.plugin.settings.port = parseInt(value)
+					await this.plugin.saveSettings()
+				}))
+	
+		new Setting(containerEl)
 			.setName('API access key')
 			.setDesc('The API token from account page')
 			.addText(text => {
@@ -37,7 +48,7 @@ export default class RedmineIssueSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings()
 					})
 			})
-
+		
 		new Setting(containerEl)
 			.setName('Test credentials')
 			.setDesc('Retrieve current logged user')
@@ -59,12 +70,49 @@ export default class RedmineIssueSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Working day hours')
-			.setDesc('the number of hours to track in a working day')
+			.setDesc('The number of hours to track in a working day')
 			.addText(text => text
 				.setValue(this.plugin.settings.dayHours.toString())
 				.onChange(async (value) => {
 					this.plugin.settings.dayHours = parseInt(value)
 					await this.plugin.saveSettings()
 				}))
+		
+		new Setting(containerEl)
+			.setName('RD Function Team')
+			.setDesc('Select the team to which you belong')
+			.addDropdown(dropdown => {
+				const options = {
+					'SW_Platform_management': 'SW Platform Management',
+					'SW_OS/BSP': 'SW OS/BSP',
+					'SW_Networking': 'SW Networking',
+					'SW_APTC': 'SW APTC',
+					'SW_PM': 'SW PM',
+					'SW_QA': 'SW QA',
+					'BIOS': 'BIOS',
+					'EE1': 'EE1',
+					'EE2': 'EE2',
+					'EE3': 'EE3',
+					'EE4': 'EE4',
+					'N/A': 'N/A',
+					'SE': 'SE',
+					'ME': 'ME',
+					'Thermal': 'Thermal',
+				}
+		
+				// 添加選項到下拉式選單
+				Object.entries(options).forEach(([value, label]) => {
+					dropdown.addOption(value, label)
+				})
+		
+				// 設置當前選中值
+				dropdown.setValue(this.plugin.settings.functionTeam)
+		
+				// 註冊改變事件
+				dropdown.onChange(async(value) => {
+					this.plugin.settings.functionTeam = value
+					await this.plugin.saveSettings()
+				})
+			})
 	}
 }

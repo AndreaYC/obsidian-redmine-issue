@@ -99,3 +99,23 @@
 .redmine-tracking-stats #circle-bg {
     stroke: var(--background-primary);
 }
+
+.redmine-issue-timer-container {
+    margin-top: 10px;
+    text-align: right; /* 按鈕靠右對齊 */
+}
+
+.redmine-issue-start-timer-button,
+.redmine-issue-stop-timer-button {
+    background-color: #007bff; /* 藍色背景 */
+    color: white; /* 白色文字 */
+    border: none; /* 去掉邊框 */
+    border-radius: 4px; /* 圓角 */
+    padding: 8px 12px; /* 按鈕內間距 */
+    cursor: pointer; /* 鼠標指針效果 */
+}
+
+.redmine-issue-start-timer-button:hover,
+.redmine-issue-stop-timer-button:hover {
+    background-color: #0056b3; /* 深藍色 */
+}

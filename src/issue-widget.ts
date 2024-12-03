@@ -2,6 +2,9 @@ import RedmineIssuePlugin from './main'
 import {RedmineIssue} from './lib/redmine'
 import * as path from 'path'
 
+import { Notice } from 'obsidian'
+import { ButtonComponent } from 'obsidian'
+
 export default class IssueWidget {
   el: HTMLElement;
   plugin: RedmineIssuePlugin;
@@ -46,6 +49,7 @@ export default class IssueWidget {
     this.el.empty()
     this.showIssueDetails()
     this.showTimeStats()
+    this.showTransitionControls()
   }
 
   showIssueDetails(): void {
@@ -74,10 +78,30 @@ export default class IssueWidget {
       attr: {
         rel: 'noopener',
         target: '_blank',
-        href: path.join('https://'+this.plugin.settings.host, 'issues', this.issue.id.toString()),
+        href: path.join('http://' + this.plugin.settings.host + ':' + this.plugin.settings.port, 'issues', this.issue.id.toString()),
       },
       cls: ['external-link']
-    })
+    });
+  }
+
+  showTransitionControls(): void {
+    if (!this.issue) {
+      return
+    }
+
+    // check obsidian-time-tracker plugin is installed or not
+    if (!window.timeTrackerEventBus) {
+      console.warn('Time Tracker plugin is not installed. Timer controls will not be displayed.');
+      return; // not show timerControlContainer
+  }
+
+    // init timerControlContainer and add button
+    this.timerControlContainer = this.el.createDiv({ cls: ['redmine-issue-timer-container'] });
+
+    const startTimerButton = new ButtonComponent(this.timerControlContainer)
+      .setIcon('time-tracker-play').setTooltip('Start Timer')
+      .setClass('redmine-issue-start-timer-button')
+      .onClick(() => this.startTimer());
   }
 
   showTimeStats(): void {
@@ -99,4 +123,64 @@ export default class IssueWidget {
       timeBar.style.width = Math.ceil(doneRatio) + '%'
     }
   }
+
+  startTimer(): void {
+    if (!window.timeTrackerEventBus) {
+      console.warn('Time Tracker Event Bus is not initialized.');
+      return;
+    }
+
+    // construct timer data
+    const timerData = {
+      id: this.issue.id,
+      description: this.issue.subject,
+      project: this.issue.project.name,
+      startedAt: new Date(),
+      tags: ['redmine']
+    };
+
+    // dispatch start timer event to time-tracker
+    window.timeTrackerEventBus.dispatchEvent(new CustomEvent('starttimer', {
+      detail: timerData
+    }));
+
+    // 更新 UI，提示計時器已啟動
+    this.timerControlContainer.empty();
+    const stopTimerButton = new ButtonComponent(this.timerControlContainer)
+      .setIcon('time-tracker-stop').setTooltip('Stop Timer')
+      .setClass('redmine-issue-stop-timer-button')
+      .onClick(() => this.stopTimer());
+    
+    new Notice(`Timer started for issue: ${this.issue.id}`);
+  }
+
+  stopTimer(): void {
+    if (!window.timeTrackerEventBus) {
+      console.warn('Time Tracker Event Bus is not initialized.');
+      return
+    }
+
+    // 假設 `timerData` 被存儲為屬性
+    const timerData = {
+      id: this.issue.id,
+      description: this.issue.subject,
+      endedAt: new Date()
+    };
+
+    // 發送停止事件
+    window.timeTrackerEventBus.dispatchEvent(new CustomEvent('stoptimer', {
+      detail: timerData
+    }));
+
+    // 更新 UI，提示計時器已停止
+    this.timerControlContainer.empty();
+    const startTimerButton = new ButtonComponent(this.timerControlContainer)
+      //.setButtonText('Start Timer')
+      .setIcon('time-tracker-play').setTooltip('Start Timer')
+      .setClass('redmine-issue-start-timer-button')
+      .onClick(() => this.startTimer());
+    
+    new Notice(`Timer stopped for issue: ${this.issue.id}`);
+  }
+
 }

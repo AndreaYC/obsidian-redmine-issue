@@ -41,6 +41,24 @@ export default class TrackingSaveModal extends Modal {
 
     let duration = (this.event.detail.duration / 60 / 60).toFixed(2)
     let activityTypeId = activityTypes[0].id
+    let spendOn = this.event.detail.startedAt
+
+    new Setting(this.contentEl)
+    .setName('Date')
+    .setDesc('Select the date for the activity')
+      .addText(text => {
+        // 使用 input 元素的 date 類型
+        const input = document.createElement('input')
+        input.type = 'date'
+        input.value = new Date().toISOString().slice(0, 10)
+        input.onchange = async () => {
+            spendOn = new Date(input.value) // 更新 spendOn
+            console.log('Selected date:', spendOn)
+        }
+
+        // 將 date 選單嵌入到 Obsidian 的設定框架中
+        text.inputEl.replaceWith(input)
+    })
 
     new Setting(this.contentEl)
       .setName('Hours')
@@ -82,7 +100,7 @@ export default class TrackingSaveModal extends Modal {
         }
 
         btnSave.setDisabled(true)
-        this.save(duration, parseFloat(activityTypeId), comment).finally(() => {
+        this.save(duration, parseFloat(activityTypeId), spendOn, comment).finally(() => {
           btnSave.setDisabled(false)
         }).then(() => {
           this.close()
@@ -92,8 +110,8 @@ export default class TrackingSaveModal extends Modal {
       })
   }
 
-  async save(duration: string, activityId: number, comment: string): Promise<void> {
-    await this.plugin.redmineClient.saveIssueTimeEntry(this.event.detail.id, parseFloat(duration), activityId, this.event.detail.startedAt, comment)
+  async save(duration: string, activityId: number, spendOn:Date, comment: string): Promise<void> {
+    await this.plugin.redmineClient.saveIssueTimeEntry(this.event.detail.id, parseFloat(duration), activityId, spendOn, comment)
     this.plugin.onTimerSaved(this.event)
   }
 }
